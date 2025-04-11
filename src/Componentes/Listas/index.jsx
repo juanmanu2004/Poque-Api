@@ -1,29 +1,73 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from "react-router-dom";
+
+import Filtros from '../Filtros';
 import './style.css'
 
 function Listas() {
+const [data, setData] = useState([]);
+const [tipoSeleccionado, setTipoSeleccionado] = useState('All');
+const [busqueda, setBusqueda] = useState('');
+const navigate = useNavigate();
 
-    useEffect(() => {
-        const [data, setData] = useState([]);
-        fetch("https://pokeapi.co/api/v2/pokemon/?limit=1025")
-          .then(response => response.json())
-          .then(responseData => setData(responseData.results))
-          .catch(error => console.error("Error:", error));
-      }, []); 
+useEffect(() => {
+  const obtenerDatos = async () => {
+    if (tipoSeleccionado === 'All') {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1025");
+      const json = await res.json();
+      setData(json.results);
+    } else {
+      const res = await fetch(`https://pokeapi.co/api/v2/type/${tipoSeleccionado}`);
+      const json = await res.json();
+      const listaFiltrada = json.pokemon.map(p => p.pokemon);
+      setData(listaFiltrada);
+    }
+  };
+
+  obtenerDatos();
+}, [tipoSeleccionado]);
+
+const handleTipoChange = (tipo) => {
+  setTipoSeleccionado(tipo);
+};
+
+let resultados = data;
+if (busqueda.length >= 3 && isNaN(busqueda)) {
+  resultados = data.filter(pokemon =>
+    pokemon.name.toLowerCase().includes(busqueda.toLowerCase())
+  );
+}
+
+  if (!isNaN(busqueda)) {
+    resultados = data.filter(pokemon =>
+      pokemon.url.includes('/' + busqueda)
+    );
+  }
   
-      return (
-        <section className='c-lista'>
-          {data.map((pokemon, index) => (
-            <div className='c-lista-pokemon'
-            key={index}>
-              <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.url.split("/")[6]}.png`} 
-                    alt={`Pokémon ${pokemon.name}`} width='auto' height='60' loading='lazy'
-                  />
-              <p>{pokemon.name}</p>
-            </div>
-          ))}
-        </section>
-      );
+  return (
+    <>
+     <input
+        type="text"
+        placeholder="Buscar Pokémon"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="c-buscador"
+      />
+    <Filtros onTipoChange={handleTipoChange}/>
+     <section className='c-lista'>
+      {resultados.map((pokemon, index) => (
+        <div className='c-lista-pokemon'onClick={() => navigate(`/Pokemon/${pokemon.name}`)}
+        key={index}>
+           <p>{pokemon.url.split("/")[6]}</p>
+          <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.url.split("/")[6]}.png`} 
+                alt={`Pokémon ${pokemon.name}`} width='auto' height='60' loading='lazy'
+              />
+          <p>{pokemon.name}</p>
+        </div>
+      ))}
+    </section>
+    </>
+  );
 }
 
 export default Listas
